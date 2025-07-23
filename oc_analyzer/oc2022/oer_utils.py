@@ -1,81 +1,57 @@
-#run with corrected AEs
-#modified code to search through structure
 import numpy as np
 import pandas as pd
-import re
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 import matplotlib.gridspec as gridspec
 plt.rcParams['mathtext.default'] = 'regular'
 
-corrOH=0.26
-corrO=-0.03
-corrHO2=0.22
-def corr(row):
-    ads = row['ads_symbols']
-    energy = row['adsorption_energy']
-    #num = row['nads']
-    num = 1
-    if ads == 'OH':
-        energy += num*corrOH
-    if ads == 'O':
-        energy += num*corrO
-    if ads == 'HO2':
-        energy += num*corrHO2        
-    return energy  
-
-def maskAndSort (df, ads):
-    mask = (df['ads_symbols'] == ads) 
-    df_ads = df[mask]
-    del df_ads['ads_symbols']
-    df_ads = df_ads.set_index('slab_sid') #done at this point as same slab_sid may have multiple adsorbates
-    df_ads.sort_index(inplace=True)
-    return df_ads
+def gibbs_correction(row, correction_dict):
+    """
+    Applies Gibbs free energy correction based on the adsorbate symbol.
+    Assumes adsorption energy *per adsorbate*.
+    """
+    return correction_dict.get(row["ads_symbols"], 0) + row["adsorption_energy"]
 
 def scaling(x_vals, y_vals):
     reg = LinearRegression()
     reg.fit(x_vals.reshape(-1, 1), y_vals)
     return reg.intercept_, reg.coef_[0]
 
-def twoAdsorbates(adE, x, y):
-    df_x = maskAndSort(adE, x)
-    df_y = maskAndSort(adE, y)
-    df_both = pd.merge(df_x, df_y, how='inner', left_index=True, right_index=True)
-    x_vals = np.array(list(df_both['adsorption_energy_x']))
-    y_vals = np.array(list(df_both['adsorption_energy_y']))
-    scaling_intercept, scaling_slope = scaling(x_vals, y_vals)
-    return scaling_intercept, scaling_slope, df_x, df_y, df_both
+def merge_slabs_with_all_adsorbates(df, ads_list, miller=False):
 
-def mergeThree(adE, x, y, z):
-    df_x = maskAndSort(adE, x)
-    df_y = maskAndSort(adE, y)
-    df_z = maskAndSort(adE, z)
-    df_both = pd.merge(df_x, df_y, how='inner', left_index=True, right_index=True)
-    df_three = pd.merge(df_both, df_z, how='inner', left_index=True, right_index=True)
-    #scaling
-    x_vals = np.array(list(df_three['adsorption_energy_x']))
-    y_vals = np.array(list(df_three['adsorption_energy_y']))
-    z_vals = np.array(list(df_three['adsorption_energy']))
-    scaling_intercept_xy, scaling_slope_xy = scaling(x_vals, y_vals)
-    print('slope-' + x + '-' + y +': ', scaling_slope_xy, ' intercept-'+ x + '-'+ y+': ', scaling_intercept_xy)
-    scaling_intercept_xz, scaling_slope_xz = scaling(x_vals, z_vals)
-    print('slope-' + x + '-' + z +': ', scaling_slope_xz, ' intercept-'+ x + '-'+ z+': ', scaling_intercept_xz)
-    scaling_intercept_yz, scaling_slope_yz = scaling(y_vals, z_vals)
-    print('slope-' + y + '-' + z +': ', scaling_slope_yz, ' intercept-'+ y + '-'+ z+': ', scaling_intercept_yz)
-    df_three = df_three.rename(columns={'adsorption_energy_x': x, 'adsorption_energy_y': y, 'adsorption_energy': z })
-    df_three = df_three.rename(columns={'system_id_x': 'system_id_'+x, 'system_id_y': 'system_id_'+y, 'system_id': 'system_id_'+z })
-    df_three.drop(['bulk_id_x', 'miller_index_x', 'nads_x', 'bulk_symbols_x', 'bulk_id_y', 'miller_index_y', 'nads_y', 'bulk_symbols_y'], axis=1, inplace=True)
-    return df_three
+    if miller:
+        matching_columns = ['slab_sid', "miller_index"]
+    else:
+        matching_columns = 'slab_sid'
 
-def reaction_energies(adE):
-    adE['delG1'] = adE['OH']
-    adE['delG2'] = adE['O'] - adE['OH']
-    adE['delG3'] = adE['HO2'] - adE['O']
-    adE['delG4'] = 4.92 - adE['HO2']
-    return adE
+    merged_df = df[df['ads_symbols'] == ads_list[0]].copy()
+    for ads in ads_list[1:]:
+        ads_df = df[df['ads_symbols'] == ads]
+        merged_df = pd.merge(merged_df, ads_df, how='inner',
+                             left_on=matching_columns, right_on=matching_columns,
+                             suffixes=('', f'_{ads}'))
 
-def overpotential(delG1, delG2, delG3, delG4):
-    return (max(delG1, delG2, delG3, delG4))
+    duplicated_cols = [name.strip("_" + ads_list[-1])
+                       for name in merged_df.columns
+                       if "_" + ads_list[-1] in name]
+
+    merged_df = merged_df.rename(columns={col: col + "_" + ads_list[0] for col in duplicated_cols})
+
+    return merged_df
+
+def compute_oer_eta(df):
+    df = compute_oer_reaction_energies(df)
+    df['maxG'] = df[['delG1', 'delG2', 'delG3', 'delG4']].apply(max, axis=1)
+    df['RDS'] = df.apply(get_rds, axis=1)
+    df['eta'] = df['maxG'] - 1.23
+    return df
+
+def compute_oer_reaction_energies(df):
+    df['delG1'] = df['adsorption_free_energy_OH']
+    df['delG2'] = df['adsorption_free_energy_O'] - df['adsorption_free_energy_OH']
+    df['delG3'] = df['adsorption_free_energy_HO2'] - df['adsorption_free_energy_O']
+    df['delG4'] = 4.92 - df['adsorption_free_energy_HO2']
+    return df
 
 def get_rds(row):
     rn1 = row['delG1']

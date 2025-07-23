@@ -61,21 +61,23 @@ def main():
 
     fig, ax_main_left, ax_top, ax_right = pltu.create_main_panels(ae_limits=(-2, 2),
                                                                   eta_limits=(2, 0),
-                                                                  xlabel=r'${\Delta G}_H$')
+                                                                  xlabel=r'${\Delta G_H}$')
 
-    pltu.add_shadded_regions(ax_main_left, ax_top, ax_right, uncertainty=0.3)
+    uncertainty = 0.3
 
+    pltu.add_shadded_regions(ax_main_left, ax_top, ax_right, uncertainty=uncertainty)
+    
     pltu.plot_main_panel(ax_main_left, ax_top, ax_right, her_data,
                          xlabel='adsorption_free_energy',
                          lit=lit, special_samples=special_samples)
 
     pltu.plot_distributions(ax_top, ax_right, her_data,
-                            xlabel='adsorption_free_energy', uncertainty=0.3)
+                            xlabel='adsorption_free_energy', uncertainty=uncertainty)
 
     plt.savefig("her.svg")
 
     print("Percentage of catalysts within uncertainty: ",
-          len(her_data[(her_data['eta'] < 0.3)]) / len(her_data) * 100)
+          len(her_data[(her_data['eta'] < uncertainty)]) / len(her_data) * 100)
 
     plt.show()
 
