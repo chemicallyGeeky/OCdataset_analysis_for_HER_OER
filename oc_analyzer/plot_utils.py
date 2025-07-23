@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import seaborn as sns
 
 
 def create_main_panels(ae_limits=(-2, 2), eta_limits=(2, 0), xlabel=r'${\Delta G}_H$'):
@@ -55,10 +56,10 @@ def add_shadded_regions(ax_main_left, ax_top, ax_right, uncertainty=0.3):
 
 
 def plot_main_panel(ax_main_left, ax_top, ax_right, her_data,
-                    xlabel, lit=None, special_samples=None):
+                    xlabel, lit=None, special_samples=None, s=5, alpha=0.1):
 
     ax_main_left.scatter(her_data[xlabel], her_data['eta'],
-                         color='k', s=5, alpha=0.1, label='OC20 DFT predictions')
+                         color='k', s=s, alpha=alpha, label='OC20 DFT predictions')
 
     if lit is not None:
         ax_main_left.scatter(lit["database_value"], lit["experimental_value"],
@@ -99,7 +100,7 @@ def plot_distributions(ax_top, ax_right, her_data, xlabel, uncertainty=0):
                width=w * 0.8, color='cornflowerblue', alpha=1)    # top plot
     ax_top.bar(bins[(bins < -uncertainty) | (bins > uncertainty)],
                counts[(bins < -uncertainty) | (bins > uncertainty)],
-               width=w * 0.8, color='cornflowerblue', alpha=uncertainty)    # top plot
+               width=w * 0.8, color='cornflowerblue', alpha=0.3)    # top plot
 
 
     counts, bins = np.histogram(her_data['eta'], bins=150)    # right plot
@@ -109,3 +110,24 @@ def plot_distributions(ax_top, ax_right, her_data, xlabel, uncertainty=0):
                   color='cornflowerblue', alpha=0.3)    # right plot
     ax_right.barh(bins[bins < uncertainty], counts[bins < uncertainty], height=w * 0.8,
                   color='cornflowerblue', alpha=1)    # right plot
+
+
+def make_bar_plot(data):
+    sns.set(font_scale=3, rc={'font.weight': 'bold'})
+    sns.set_style('ticks')
+    f, ax = plt.subplots(figsize=(10, 12))
+    sns.histplot(y=data['ads_symbols'], color='green')
+    ax.set_xlabel('Adsorbate', fontsize=32, fontweight='bold')
+    ax.set_ylabel('Count', fontsize=32, fontweight='bold')
+
+
+def make_violin_plot(data):
+    sns.set(font_scale=2, rc={'font.weight': 'bold'})
+    sns.set_style('ticks')
+    f, ax = plt.subplots(figsize=(10, 10))
+    sns.violinplot(data=data.loc[:, ['OH', 'O', 'HO2', 'O2']],
+                   x="ads_symbols", y='adsorption_free_energy',
+                   palette=sns.color_palette('dark'),
+                   fill=False, split=False, inner='quart')
+    ax.set_xlabel('Distribution', fontsize=32, fontweight='bold')
+    ax.set_ylabel('Adsorption Energy (eV)', fontsize=32, fontweight='bold')
