@@ -4,8 +4,9 @@ Repository for the paper "Adsorption energies are necessary but not sufficient t
 
 
 <h1 align="center">
-<img src="https://raw.githubusercontent.com/chemicalGeek2/catalyst/refs/heads/refactoring/paper/figures/her.svg">
+<img src="https://raw.githubusercontent.com/chemicallyGeeky/OCdataset_analysis_for_HER_OER/refs/heads/main/paper/figures/her.svg?token=GHSAT0AAAAAADDRVH3CN2FJB36EWFOBXZHQ2EWC5RA">
 
+## How to use
 To reproduce the figures, clone the repo and run:
 
 ```
