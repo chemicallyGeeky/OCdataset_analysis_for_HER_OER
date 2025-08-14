@@ -146,3 +146,35 @@ def make_violin_plot(data):
                    fill=False, split=False, inner='quart')
     ax.set_xlabel('Distribution', fontsize=32, fontweight='bold')
     ax.set_ylabel('Adsorption Energy (eV)', fontsize=32, fontweight='bold')
+
+def plot_stability_distribution(stability, stability_filter, uncertainty):
+
+    plt.figure(figsize=(10, 8))
+    ax = plt.gca()
+
+    counts, bins = np.histogram(stability["decomposition_energy"], bins=150)
+    cbins = (bins[1:] + bins[:-1]) / 2
+    w = cbins[1] - cbins[0]
+    ax.bar(cbins[(cbins < uncertainty)],
+           counts[(cbins < uncertainty)],
+           width=w * 0.8, color="gray", alpha=1, label=r"Materials with computed $\eta$")
+    ax.bar(cbins[(cbins > uncertainty)],
+           counts[(cbins > uncertainty)],
+           width=w * 0.8, color="gray", alpha=0.3)
+
+    counts, bins = np.histogram(stability.loc[stability_filter, "decomposition_energy"], bins=bins)
+    cbins = (bins[1:] + bins[:-1]) / 2
+    w = cbins[1] - cbins[0]
+    ax.bar(cbins[(cbins < uncertainty)],
+           counts[(cbins < uncertainty)],
+           width=w * 0.8, color="cornflowerblue", alpha=1, label="Filtered materials")
+    ax.bar(cbins[(cbins > uncertainty)],
+           counts[(cbins > uncertainty)],
+           width=w * 0.8, color="cornflowerblue", alpha=0.3)
+
+    ax.axvspan(stability["decomposition_energy"].min(), uncertainty, color='green', alpha=0.2, zorder=0, lw=0, label="Stable within uncertainty")
+    
+    ax.set_xlim((stability["decomposition_energy"].min(), 3))
+    ax.set_xlabel('Decomposition Energy (eV/atom)', fontsize=15)
+    ax.set_ylabel('Count', fontsize=15)
+    ax.legend(loc='upper right', fontsize=15)
