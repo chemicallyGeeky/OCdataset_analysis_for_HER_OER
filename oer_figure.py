@@ -110,6 +110,7 @@ def main():
                             xlabel='eta_approx', uncertainty=uncertainty, bins=bins, color=filtered_color)
 
     plt.savefig("paper/figures/oer.svg")
+    plt.savefig("paper/figures/oer.pdf")
 
     print(f"Number of catalysts: {len(oer_data_filtered)} surfaces, {len(oer_data_filtered['bulk_id_OH'].unique())} materials")
 

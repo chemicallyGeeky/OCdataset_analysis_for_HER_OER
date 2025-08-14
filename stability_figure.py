@@ -38,8 +38,9 @@ def main():
           (stability.loc[stability_filter, "decomposition_energy"] < uncertainty).sum() / sum(stability_filter) * 100,
           (stability.loc[stability_filter, "decomposition_energy"] < uncertainty).sum())
 
-    
+
     plt.savefig("paper/figures/stability.svg")
+    plt.savefig("paper/figures/stability.pdf")
 
     plt.show()
 

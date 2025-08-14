@@ -75,6 +75,7 @@ def main():
                             xlabel='adsorption_free_energy', uncertainty=uncertainty)
 
     plt.savefig("paper/figures/her.svg")
+    plt.savefig("paper/figures/her.pdf")
 
     print("Percentage of catalysts within uncertainty: ",
           len(her_data[(her_data['eta'] < uncertainty)]) / len(her_data) * 100)
