@@ -69,12 +69,12 @@ def main():
     
     pltu.plot_main_panel(ax_main_left, ax_top, ax_right, her_data,
                          xlabel='adsorption_free_energy',
-                         lit=lit, special_samples=special_samples)
+                         lit=lit, special_samples=special_samples, color="cornflowerblue")
 
     pltu.plot_distributions(ax_top, ax_right, her_data,
                             xlabel='adsorption_free_energy', uncertainty=uncertainty)
 
-    plt.savefig("her.svg")
+    plt.savefig("paper/figures/her.svg")
 
     print("Percentage of catalysts within uncertainty: ",
           len(her_data[(her_data['eta'] < uncertainty)]) / len(her_data) * 100)

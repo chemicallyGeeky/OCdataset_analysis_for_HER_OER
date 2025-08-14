@@ -54,12 +54,21 @@ def add_shadded_regions(ax_main_left, ax_top, ax_right, uncertainty=0.3):
     ax_top.axvspan(-uncertainty, uncertainty, color='gray', alpha=0.2, zorder=0)
     ax_right.axhspan(uncertainty, 0, color='gray', alpha=0.2, zorder=0)
 
+def add_best_value(ax_main_left, ax_top, ax_right, best_val=0.4, color='magenta'):
+
+    # Add shaded regions for uncertainty
+    ax_main_left.axhline(best_val, 0, color=color, alpha=0.5,
+                         label="Best known calatyst", zorder=0)
+    ax_main_left.axvline(best_val, 0, color=color, alpha=0.5,
+                         zorder=0)
+    ax_top.axvline(best_val, color=color, alpha=0.5, zorder=0)
+    ax_right.axhline(best_val, color=color, alpha=0.5, zorder=0)
 
 def plot_main_panel(ax_main_left, ax_top, ax_right, her_data,
-                    xlabel, lit=None, special_samples=None, s=5, alpha=0.1):
+                    xlabel, lit=None, special_samples=None, s=5, alpha=0.1, color="k", label='OC20 DFT predictions'):
 
     ax_main_left.scatter(her_data[xlabel], her_data['eta'],
-                         color='k', s=s, alpha=alpha, label='OC20 DFT predictions')
+                         color=color, s=s, alpha=alpha, label=label)
 
     if lit is not None:
         ax_main_left.scatter(lit["database_value"], lit["experimental_value"],
@@ -89,28 +98,34 @@ def plot_main_panel(ax_main_left, ax_top, ax_right, her_data,
     ax_main_left.legend(loc='lower center', fontsize=15)
 
 
-def plot_distributions(ax_top, ax_right, her_data, xlabel, uncertainty=0):
+def plot_distributions(ax_top, ax_right, her_data, xlabel, uncertainty=0, bins=150, color='cornflowerblue'):
 
     # Shaded area
-    counts, bins = np.histogram(her_data[xlabel], bins=150)         # top plot
-    bins = (bins[1:] + bins[:-1]) / 2
-    w = bins[1] - bins[0]
-    ax_top.bar(bins[(bins > -uncertainty) & (bins < uncertainty)],
-               counts[(bins > -uncertainty) & (bins < uncertainty)],
-               width=w * 0.8, color='cornflowerblue', alpha=1)    # top plot
-    ax_top.bar(bins[(bins < -uncertainty) | (bins > uncertainty)],
-               counts[(bins < -uncertainty) | (bins > uncertainty)],
-               width=w * 0.8, color='cornflowerblue', alpha=0.3)    # top plot
+    counts, bins = np.histogram(her_data[xlabel], bins=bins)         # top plot
+    cbins = (bins[1:] + bins[:-1]) / 2
+    w = cbins[1] - cbins[0]
+    ax_top.bar(cbins[(cbins > -uncertainty) & (cbins < uncertainty)],
+               counts[(cbins > -uncertainty) & (cbins < uncertainty)],
+               width=w * 0.8, color=color, alpha=1)    # top plot
+    ax_top.bar(cbins[(cbins < -uncertainty) | (cbins > uncertainty)],
+               counts[(cbins < -uncertainty) | (cbins > uncertainty)],
+               width=w * 0.8, color=color, alpha=0.3)    # top plot
 
 
-    counts, bins = np.histogram(her_data['eta'], bins=150)    # right plot
-    bins = (bins[1:] + bins[:-1]) / 2
-    w = bins[1] - bins[0]
-    ax_right.barh(bins[bins > uncertainty], counts[bins > uncertainty], height=w * 0.8,
-                  color='cornflowerblue', alpha=0.3)    # right plot
-    ax_right.barh(bins[bins < uncertainty], counts[bins < uncertainty], height=w * 0.8,
-                  color='cornflowerblue', alpha=1)    # right plot
+    # Reoriganize the bins because this spans only half the range
+    half_bins = np.sort(np.concat([(bins[1:] + bins[:-1]) / 2, bins]))
+    half_bins = half_bins - half_bins.min()
+    half_bins = half_bins[half_bins >= 0]
 
+    counts, half_bins = np.histogram(her_data['eta'], bins=half_bins)    # right plot
+    half_cbins = (half_bins[1:] + half_bins[:-1]) / 2
+    w = half_cbins[1] - half_cbins[0]
+    ax_right.barh(half_cbins[half_cbins > uncertainty], counts[half_cbins > uncertainty],
+                  height=w * 0.8, color=color, alpha=0.3)    # right plot
+    ax_right.barh(half_cbins[half_cbins < uncertainty], counts[half_cbins < uncertainty],
+                  height=w * 0.8, color=color, alpha=1)    # right plot
+
+    return bins
 
 def make_bar_plot(data):
     sns.set(font_scale=3, rc={'font.weight': 'bold'})
