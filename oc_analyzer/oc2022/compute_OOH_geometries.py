@@ -65,8 +65,8 @@ for i in range(len(file)):
      O1 = O_pos[0]; O2 = O_pos[1]
      H1 = H_pos[0]
      OO = atoms.get_distance(O1, O2, mic=True)
-     angle1 = atoms.get_angle(O2, O1, H1) #O1 is the central atom next to H
-     angle2 = atoms.get_angle(O1, O2, H1) #O2 is the central atom next to H
+     angle1 = atoms.get_angle(O2, O1, H1, mic=True) #O1 is the central atom next to H
+     angle2 = atoms.get_angle(O1, O2, H1, mic=True) #O2 is the central atom next to H
      OH1 = atoms.get_distance(O1, H1, mic=True)
      OH2 = atoms.get_distance(O2, H1, mic=True)
      results[sid[i]]= {'filename': file[i], 'entry number': entry[i], 
@@ -77,8 +77,8 @@ for i in range(len(file)):
         H2 = H_pos[1]
         O3 = O_pos[2]; O4 = O_pos[3]
         OO_b = atoms.get_distance(O3, O4, mic=True)
-        angle1_b = atoms.get_angle(O4, O3, H2) #O3 is the central atom next to H2
-        angle2_b = atoms.get_angle(O3, O4, H2) #O4 is the central atom next to H2
+        angle1_b = atoms.get_angle(O4, O3, H2, mic=True) #O3 is the central atom next to H2
+        angle2_b = atoms.get_angle(O3, O4, H2, mic=True) #O4 is the central atom next to H2
         OH1_b = atoms.get_distance(O3, H2, mic=True)
         OH2_b = atoms.get_distance(O4, H2, mic=True) 
         results2[sid[i]]= {'OH_length_1b': OH1_b, 'OH_length_2b': OH2_b,
