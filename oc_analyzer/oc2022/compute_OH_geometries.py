@@ -55,11 +55,11 @@ for i in range(len(file)):
      O_pos = np.setdiff1d(ads_pos, H_pos)
      lens = []
      for k in np.arange(0, len(H_pos)):
-        dist = atoms.get_distance(H_pos[k], O_pos[k])
+        dist = atoms.get_distance(H_pos[k], O_pos[k], mic=True)
         lens.append(dist)
      #create dictionary entry
      results[sid[i]]= {'filenameOH': file[i], 'entry numberOH': entry[i], 
-                    'compositionOH': atoms.get_chemical_formula(), 'adsorbate OH len': lens }
+                    'compositionOH': atoms.get_chemical_formula(), 'adsorbate_OH_len': lens }
     
 results_df = pd.DataFrame.from_dict(results, orient='index')  
 
