@@ -54,10 +54,9 @@ for i in range(len(file)):
      dataset = LmdbDataset({'src': file[i]})
      j = entry[i]
      data = dataset[j]
-     #print(file[i], entry[i])
      cell = data.cell.squeeze(0).numpy() 
      atoms = Atoms( numbers=data.atomic_numbers.tolist(), positions=data.pos_relaxed.numpy(), cell=cell,  pbc=True)
-     tags = data.tags.numpy()
+     tags = data.tags.numpy() #for identifying adsorbates, all adsorbate atoms have tag 2
      atomic_numbers = data.atomic_numbers.numpy()
      #get adsorbate sites
      ads_pos = np.where(tags==2)[0]
@@ -65,27 +64,26 @@ for i in range(len(file)):
      O_pos = np.setdiff1d(ads_pos, H_pos)
      O1 = O_pos[0]; O2 = O_pos[1]
      H1 = H_pos[0]
-     OO = atoms.get_distance(O1, O2)
-     angle1 = atoms.get_angle(O2, O1, H1) 
-     angle2 = atoms.get_angle(O1, O2, H1) 
-     OH1 = atoms.get_distance(O1, H1)
-     OH2 = atoms.get_distance(O2, H1)
+     OO = atoms.get_distance(O1, O2, mic=True)
+     angle1 = atoms.get_angle(O2, O1, H1) #O1 is the central atom next to H
+     angle2 = atoms.get_angle(O1, O2, H1) #O2 is the central atom next to H
+     OH1 = atoms.get_distance(O1, H1, mic=True)
+     OH2 = atoms.get_distance(O2, H1, mic=True)
      results[sid[i]]= {'filename': file[i], 'entry number': entry[i], 
-                    'composition': atoms.get_chemical_formula(),
-                    'OH_length 1': OH1, 'OH_length 2': OH2,
-                    'OO_length': OO, 'OOH angle 1': angle1, 'OOH angle 2': angle2 }
+                    'composition': atoms.get_chemical_formula(), 'nads': data.nads,
+                    'OH_length_1': OH1, 'OH_length_2': OH2,
+                    'OO_length': OO, 'OOH_angle_1': angle1, 'OOH_angle_2': angle2 }
      if data.nads >= 2:
         H2 = H_pos[1]
-        O3 = ads_pos[2]; O4 = ads_pos[3]
-        OO_b = atoms.get_distance(O3, O4)
-        angle1_b = atoms.get_angle(O3, O4, H2) 
-        angle2_b = atoms.get_angle(O4, O3, H2) 
-        OH1_b = atoms.get_distance(O3, H2)
-        OH2_b = atoms.get_distance(O4, H2) 
-        results2[sid[i]]= {'OH_length 1b': OH1_b, 'OH_length 2b': OH2_b,
-                    'OO_lengthb': OO_b, 'OOH angle 1b': angle1_b, 'OOH angle 2b': angle2_b }
-     if data.nads > 2:
-            print(sid[i], 'filename', file[i], 'entry number', entry[i]) #check manually later  
+        O3 = O_pos[2]; O4 = O_pos[3]
+        OO_b = atoms.get_distance(O3, O4, mic=True)
+        angle1_b = atoms.get_angle(O4, O3, H2) #O3 is the central atom next to H2
+        angle2_b = atoms.get_angle(O3, O4, H2) #O4 is the central atom next to H2
+        OH1_b = atoms.get_distance(O3, H2, mic=True)
+        OH2_b = atoms.get_distance(O4, H2, mic=True) 
+        results2[sid[i]]= {'OH_length_1b': OH1_b, 'OH_length_2b': OH2_b,
+                    'OO_lengthb': OO_b, 'OOH_angle_1b': angle1_b, 'OOH_angle_2b': angle2_b }
+        print(sid[i], 'filename', file[i], 'entry number', entry[i]) #check manually later  
      
 results_df = pd.DataFrame.from_dict(results, orient='index')  
 results2_df = pd.DataFrame.from_dict(results2, orient='index') #nads > 1, 2nd adsorbate
