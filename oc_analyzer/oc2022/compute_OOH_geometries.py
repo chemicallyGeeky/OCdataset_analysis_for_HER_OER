@@ -90,10 +90,11 @@ results2_df = pd.DataFrame.from_dict(results2, orient='index') #nads > 1, 2nd ad
 df = pd.concat([results_df, results2_df], axis=1) #combine
 
 breakpoint()
+adE2 = adE2.rename(columns={'nads': 'nads0'})
 adE3 = df.join(adE2, how='inner')
 adE3.to_csv('angles_OOH.csv') #3238
 
-#nads > 2: some OOH's are ok, some are not; all 3 should not not included after filtering
+#nads > 2
 # 43116 filename is2res_total_train_val_test_lmdbs/data/oc22/is2re-total/train/data.0017.lmdb entry number 150
 # 42932 filename is2res_total_train_val_test_lmdbs/data/oc22/is2re-total/train/data.0033.lmdb entry number 573
 # 44497 filename is2res_total_train_val_test_lmdbs/data/oc22/is2re-total/train/data.0034.lmdb entry number 183
