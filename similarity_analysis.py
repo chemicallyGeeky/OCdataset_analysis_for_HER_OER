@@ -1,184 +1,89 @@
-import numpy as np
 import pandas as pd
-import re
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
-import newPlots
-import seaborn as sns
-import oer_functions2
-import matplotlib.gridspec as gridspec
+import numpy as np
+from oc_analyzer.oc2022.filter import get_oh_filter, get_ooh_filter
 
-filename = 'data/oc2022/adsorption_energies.csv' #all adsorbates: 31425
-adE = pd.read_csv(filename, index_col=0, na_values='')
-adE.drop(['traj_id', 'y_relaxed', 'natoms', 'nads2'], axis=1, inplace=True)
+def group_similar(df, subset, quantity):
+    # Check duplicates
+    n_data = len(df)
+    all_dup_rows = df.duplicated(subset=subset, keep=False)
+    dup_rows = df.duplicated(subset=subset, keep="first")
+    duplicated_df = df[all_dup_rows]
+    unique_pair_df = df[~dup_rows]
 
-maskOH =  (adE['ads_symbols'] == 'OH')  
-maskO = (adE['ads_symbols'] == 'O')  
-maskOOH = (adE['ads_symbols'] == 'HO2')
+    print("Number of unique data points: ", len(unique_pair_df), "/", n_data)
 
-adE_OH = adE[maskOH] #3060
-adE_O = adE[maskO] #7996
-adE_OOH = adE[maskOOH] #3238
+    repeated_pairs = duplicated_df.drop_duplicates(subset=subset)
 
-#analysis 1: same bulk_id, miller_index, slab_sid, nads: AE difference from different sites
-#analysis 2: same bulk_id, miller_index, slab_sid, but different nads: AE difference from 
-# different coverages and optionally sites
-#analysis 3: same bulk_id, miller_index but different slab_sid; nads may be same or different;
-#AE difference from surface terminations, coverages or sites
+    print("Number of repeated pairings: ", len(repeated_pairs), "/", len(duplicated_df))
 
-#ADSORBATE OH
-adE_OH = adE_OH.sort_values(by=['bulk_id', 'miller_index', 'slab_sid', 'nads'])
-#analysis 1: OH
-OH_duplicates1 = adE_OH[adE_OH.duplicated(subset=['bulk_id', 'miller_index', 'slab_sid', 'nads'], keep=False)] #28
+    df_list = []
+    diffs = []
+    dists_to_mean = []
+    dists_to_median = []
+    for i, dat in enumerate(repeated_pairs.iterrows()):
+        index, row = dat
+        condition = np.all((duplicated_df[subset] == row[subset]).to_numpy(), axis=1)
+        same_pair = duplicated_df[condition]
+        df_list.append(same_pair)
+        diffs.append(same_pair[quantity].max() - same_pair[quantity].min())
+        dists_to_mean.append(same_pair[quantity] - same_pair[quantity].mean())
+        dists_to_median.append(same_pair[quantity] - same_pair[quantity].mean())
+    
+    print("Average square distance with mean (RMSE like): ", np.sqrt(np.mean(np.concatenate(dists_to_mean)**2)))
+    print("Average difference with median (MAE like): ", np.mean(abs(np.concatenate(dists_to_median))))
+    print("Average difference between extremes: ", np.mean(diffs))
+    print("Maximum difference between extremes: ", np.max(diffs))
 
-OH_duplicates1['diff'] = OH_duplicates1.groupby(['bulk_id', 'miller_index', 'slab_sid', 'nads'])['adsorption_energy'].diff().abs()
-print('Adsorbate OH')
-print('same bulk_id, miller_index, slab_sid, nads:')
-print('min, mean, max: ', OH_duplicates1['diff'].min(), OH_duplicates1['diff'].mean(), OH_duplicates1['diff'].max())
+def print_stats(data, adsorbate, oc22=True):
+    print(f"{adsorbate} adsorption energies:")
+    print("################################################################")
+    print("Same miller (termination + coverage + site)")
+    print("--------------------------------------------------------------")
+    group_similar(data[data['ads_symbols'] == adsorbate], subset=['bulk_id', 'miller_index'], quantity='adsorption_energy')
+    print("--------------------------------------------------------------")
+    if oc22:
+        print()
+        print("Same slab_sid (coverage + site)")
+        print("--------------------------------------------------------------")
+        group_similar(data[data['ads_symbols'] == adsorbate], subset=['slab_sid'], quantity='adsorption_energy')
+        print("--------------------------------------------------------------")
+        print()
+        print("Same slab_sid and nads (site)")
+        print("--------------------------------------------------------------")
+        group_similar(data[data['ads_symbols'] == adsorbate], subset=['slab_sid', 'nads'], quantity='adsorption_energy')
+        print("--------------------------------------------------------------")
+    print("################################################################")
+    print()
+    
 
-adE_OH1 = adE_OH.drop(OH_duplicates1.index)
+if __name__ == "__main__":
+    # Load data
+    oc22_data = pd.read_csv('data/oc2022/adsorption_energies.csv', index_col=0)
+    oc20_data = pd.read_csv('data/oc2020/lmdb+metadata.csv', index_col=0)
 
-#analysis 2: OH
-OH_with_diff_nads = (
-    adE_OH1.groupby(['bulk_id', 'miller_index', 'slab_sid'])
-    ['nads'].nunique().reset_index(name='nads_count'))
+    oc20_data = oc20_data.rename(columns={"bulk_mpid": "bulk_id"})
 
-OH_with_diff_nads = OH_with_diff_nads[OH_with_diff_nads['nads_count'] > 1] #12
+    print("OC22 data:")
+    print_stats(oc22_data, adsorbate='OH')
+    print_stats(oc22_data, adsorbate='O')
+    print_stats(oc22_data, adsorbate='HO2')
+    print()
+    print("OC20 data:")
+    print_stats(oc20_data, adsorbate='*H',oc22=False)
+    print()
+    print()
+    
+    print("After filtering out bad adsorbates:")
+    oh_filter = get_oh_filter()
+    ooh_filter = get_ooh_filter()
+    oc22_data = oc22_data.drop(oh_filter[~oh_filter].index)
+    oc22_data = oc22_data.drop(ooh_filter[~ooh_filter].index)
+    oc20_data = oc20_data[oc20_data['anomaly'] == 0]
 
-OH_duplicates2 = adE_OH1.reset_index().merge(
-    OH_with_diff_nads.drop(columns='nads_count'),
-    on=['bulk_id', 'miller_index', 'slab_sid'],
-    how='inner')
-
-OH_duplicates2['diff'] = OH_duplicates2.groupby(['bulk_id', 'miller_index', 'slab_sid'])['adsorption_energy'].diff().abs()
-print('same bulk_id, miller_index, slab_sid:')
-print('min, mean, max: ', OH_duplicates2['diff'].min(), OH_duplicates2['diff'].mean(), OH_duplicates2['diff'].max())
-
-OH_duplicates2.set_index('system_id', inplace=True)
-adE_OH2 = adE_OH1.drop(OH_duplicates2.index)
-
-#analysis 3: OH
-OH_with_diff_surf = (
-    adE_OH2.groupby(['bulk_id', 'miller_index'])
-    ['slab_sid'].nunique().reset_index(name='slab_count'))
-
-OH_with_diff_surf = OH_with_diff_surf[OH_with_diff_surf['slab_count'] > 1] #319
-
-OH_duplicates3 = adE_OH2.reset_index().merge(
-    OH_with_diff_surf.drop(columns='slab_count'),
-    on=['bulk_id', 'miller_index'],
-    how='inner')
-
-OH_duplicates3['diff'] = OH_duplicates3.groupby(['bulk_id', 'miller_index'])['adsorption_energy'].diff().abs()
-OH_duplicates3.set_index('system_id', inplace=True)
-adE_OH3 = adE_OH2.drop(OH_duplicates3.index)
-
-print('same bulk_id, miller_index')
-print('min, mean, max: ', OH_duplicates3['diff'].min(), OH_duplicates3['diff'].mean(), OH_duplicates3['diff'].max())
-
-breakpoint()
-
-#ANALYSIS O
-adE_O = adE_O.sort_values(by=['bulk_id', 'miller_index', 'slab_sid', 'nads'])
-#analysis 1: O
-O_duplicates1 = adE_O[adE_O.duplicated(subset=['bulk_id', 'miller_index', 'slab_sid', 'nads'], keep=False)] 
-
-O_duplicates1['diff'] = O_duplicates1.groupby(['bulk_id', 'miller_index', 'slab_sid', 'nads'])['adsorption_energy'].diff().abs()
-print('Adsorbate O')
-print('same bulk_id, miller_index, slab_sid, nads:')
-print('min, mean, max: ', O_duplicates1['diff'].min(), O_duplicates1['diff'].mean(), O_duplicates1['diff'].max())
-
-adE_O1 = adE_O.drop(O_duplicates1.index)
-
-#analysis 2: O
-O_with_diff_nads = (
-    adE_O1.groupby(['bulk_id', 'miller_index', 'slab_sid'])
-    ['nads'].nunique().reset_index(name='nads_count'))
-
-O_with_diff_nads = O_with_diff_nads[O_with_diff_nads['nads_count'] > 1] 
-
-O_duplicates2 = adE_O1.reset_index().merge(
-    O_with_diff_nads.drop(columns='nads_count'),
-    on=['bulk_id', 'miller_index', 'slab_sid'],
-    how='inner')
-
-O_duplicates2['diff'] = O_duplicates2.groupby(['bulk_id', 'miller_index', 'slab_sid'])['adsorption_energy'].diff().abs()
-print('same bulk_id, miller_index, slab_sid:')
-print('min, mean, max: ', O_duplicates2['diff'].min(), O_duplicates2['diff'].mean(), O_duplicates2['diff'].max())
-
-O_duplicates2.set_index('system_id', inplace=True)
-adE_O2 = adE_O1.drop(O_duplicates2.index)
-
-#analysis 3: O
-O_with_diff_surf = (
-    adE_O2.groupby(['bulk_id', 'miller_index'])
-    ['slab_sid'].nunique().reset_index(name='slab_count'))
-
-O_with_diff_surf = O_with_diff_surf[O_with_diff_surf['slab_count'] > 1] 
-
-O_duplicates3 = adE_O2.reset_index().merge(
-    O_with_diff_surf.drop(columns='slab_count'),
-    on=['bulk_id', 'miller_index'],
-    how='inner')
-
-O_duplicates3['diff'] = O_duplicates3.groupby(['bulk_id', 'miller_index'])['adsorption_energy'].diff().abs()
-O_duplicates3.set_index('system_id', inplace=True)
-adE_O3 = adE_O2.drop(O_duplicates3.index)
-
-print('same bulk_id, miller_index')
-print('min, mean, max: ', O_duplicates3['diff'].min(), O_duplicates3['diff'].mean(), O_duplicates3['diff'].max())
-breakpoint()
-
-#ANALYSIS OOH
-
-adE_OH = adE_OH.sort_values(by=['bulk_id', 'miller_index', 'slab_sid', 'nads'])
-#analysis 1: OOH
-OOH_duplicates1 = adE_OOH[adE_OOH.duplicated(subset=['bulk_id', 'miller_index', 'slab_sid', 'nads'], keep=False)] 
-
-OOH_duplicates1['diff'] = OOH_duplicates1.groupby(['bulk_id', 'miller_index', 'slab_sid', 'nads'])['adsorption_energy'].diff().abs()
-print('ADSORBATE OOH')
-print('same bulk_id, miller_index, slab_sid, nads:')
-print('min, mean, max: ', OOH_duplicates1['diff'].min(), OOH_duplicates1['diff'].mean(), OOH_duplicates1['diff'].max())
-
-adE_OOH1 = adE_OOH.drop(OOH_duplicates1.index)
-
-#analysis 2: OOH
-OOH_with_diff_nads = (
-    adE_OOH1.groupby(['bulk_id', 'miller_index', 'slab_sid'])
-    ['nads'].nunique().reset_index(name='nads_count'))
-
-OOH_with_diff_nads = OOH_with_diff_nads[OOH_with_diff_nads['nads_count'] > 1] #12
-print('same bulk_id, miller_index, slab_sid: ', len(OOH_with_diff_nads))
-#empty
-# OOH_duplicates2 = adE_OOH1.reset_index().merge(
-#     OOH_with_diff_nads.drop(columns='nads_count'),
-#     on=['bulk_id', 'miller_index', 'slab_sid'],
-#     how='inner')
-
-# OOH_duplicates2['diff'] = OOH_duplicates2.groupby(['bulk_id', 'miller_index', 'slab_sid'])['adsorption_energy'].diff().abs()
-# print('same bulk_id, miller_index, slab_sid:')
-# print('min, mean, max: ', OOH_duplicates2['diff'].min(), OOH_duplicates2['diff'].mean(), OOH_duplicates2['diff'].max())
-
-# OOH_duplicates2.set_index('system_id', inplace=True)
-# adE_OOH2 = adE_OOH1.drop(OOH_duplicates2.index)
-
-#analysis 3
-OOH_with_diff_surf = (
-    adE_OOH1.groupby(['bulk_id', 'miller_index'])
-    ['slab_sid'].nunique().reset_index(name='slab_count'))
-
-OOH_with_diff_surf = OOH_with_diff_surf[OOH_with_diff_surf['slab_count'] > 1] #319
-
-OOH_duplicates3 = adE_OOH1.reset_index().merge(
-    OOH_with_diff_surf.drop(columns='slab_count'),
-    on=['bulk_id', 'miller_index'],
-    how='inner')
-
-OOH_duplicates3['diff'] = OOH_duplicates3.groupby(['bulk_id', 'miller_index'])['adsorption_energy'].diff().abs()
-OOH_duplicates3.set_index('system_id', inplace=True)
-adE_OOH3 = adE_OOH1.drop(OOH_duplicates3.index)
-
-print('same bulk_id, miller_index')
-print('min, mean, max: ', OOH_duplicates3['diff'].min(), OOH_duplicates3['diff'].mean(), OOH_duplicates3['diff'].max())
-breakpoint()
-
+    print("OC22 data:")
+    print_stats(oc22_data, adsorbate='OH')
+    print_stats(oc22_data, adsorbate='O')
+    print_stats(oc22_data, adsorbate='HO2')
+    print()
+    print("OC20 data:")
+    print_stats(oc20_data, adsorbate='*H',oc22=False)
