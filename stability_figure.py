@@ -8,7 +8,7 @@ import oc_analyzer.plot_utils as pltu
 def main():
     data = pd.read_csv('data/oc2022/adsorption_energies.csv', na_values='')
     stability_data = pd.read_csv('data/oc2022/stability.csv', na_values='')
-
+    
     oer_data = merge_slabs_with_all_adsorbates(data, ('OH', 'O', 'HO2'), miller=True)
 
     tolerance_dict = {"lowOH": 0.9, "highOH": 1.1,
@@ -26,6 +26,9 @@ def main():
 
     pltu.plot_stability_distribution(stability, stability_filter, uncertainty)
 
+    print("Total number of structures:", len(stability))
+    print("Number of filtered structures:", stability_filter.sum())
+    
     print("Average decomposition energy:", stability['decomposition_energy'].mean())
     print("Average decomposition energy (filtered):", stability.loc[stability_filter, 'decomposition_energy'].mean())
 

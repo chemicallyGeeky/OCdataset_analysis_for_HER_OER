@@ -11,7 +11,7 @@ def remove_bad_adsorbates(oer_data, lowOH=0.9, highOH=1.1,
                           lowOOH=95, highOOH=115):
 
     oh_columns = ['OH lengths']
-    ooh_columns = ['OH_length 1', 'OH_length 2', 'OO_length', 'OOH angle 1', 'OOH angle 2']
+    ooh_columns = ['OH length 1', 'OH length 2', 'OO length', 'OOH angle 1', 'OOH angle 2']
 
     oh_geo = pd.read_csv("data/oc2022/OH_geometry.csv", index_col="sid",
                          converters={c: ast.literal_eval for c in oh_columns})
@@ -25,12 +25,12 @@ def remove_bad_adsorbates(oer_data, lowOH=0.9, highOH=1.1,
         row = row.apply(np.array)
 
         cond = ((
-            ((lowOO <= row['OO_length']) & (row['OO_length'] <= highOO))
+            ((lowOO <= row['OO length']) & (row['OO length'] <= highOO))
             & ((lowOOH <= row['OOH angle 1']) & (row['OOH angle 1'] <= highOOH))
-            & ((lowOH <= row['OH_length 1']) & (row['OH_length 1'] <= highOH)))
-            | (((lowOO <= row['OO_length']) & (row['OO_length'] <= highOO))
+            & ((lowOH <= row['OH length 1']) & (row['OH length 1'] <= highOH)))
+            | (((lowOO <= row['OO length']) & (row['OO length'] <= highOO))
                & ((lowOOH <= row['OOH angle 2']) & (row['OOH angle 2'] <= highOOH))
-               & ((lowOH <= row['OH_length 2']) & (row['OH_length 2'] <= highOH))))
+               & ((lowOH <= row['OH length 2']) & (row['OH length 2'] <= highOH))))
 
         return all(cond)
 

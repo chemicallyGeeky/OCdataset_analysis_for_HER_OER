@@ -8,8 +8,8 @@ def create_main_panels(ae_limits=(-2, 2), eta_limits=(2, 0), xlabel=r'${\Delta G
 
     fig = plt.figure(figsize=(12, 8))
     # Set up the GridSpec layout: 2 rows, 2 columns
-    gs = gridspec.GridSpec(2, 2, width_ratios=[4, 1],
-                           height_ratios=[1, 4], wspace=0.05, hspace=0.05)
+    gs = gridspec.GridSpec(2, 2, width_ratios=[5, 1],
+                           height_ratios=[2, 7], wspace=0.05, hspace=0.05)
     # Main plot: bottom-left
     ax_main_left = fig.add_subplot(gs[1, 0])
     ax_main_left.set_zorder(2)
