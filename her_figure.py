@@ -45,6 +45,7 @@ def main():
     oc20_data = pd.read_csv('data/oc2020/lmdb+metadata.csv', index_col=0, na_values='')
 
     her_data = oc20_data.copy()
+    her_data = her_data[oc20_data['anomaly'] == 0]
     her_data = her_data[her_data['ads_symbols'] == '*H']
 
     her_data['adsorption_free_energy'] = her_data['adsorption_energy'] + 0.24
