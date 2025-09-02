@@ -38,9 +38,9 @@ def create_main_panels(ae_limits=(-2, 2), eta_limits=(2, 0), xlabel=r'${\Delta G
 
     # Titles
     ax_main_left.set_xlabel(r'Predicted ' + xlabel + r' (eV)', fontsize=20)
-    ax_main_left.set_ylabel(r'$\eta_{TD}$ (V)', fontsize=20)
+    ax_main_left.set_ylabel(r'$\eta$ (V)', fontsize=20)
     ax_top.set_title(xlabel + r" distribution", fontsize=20)
-    ax_right.set_title(r'$\eta_{TD}$ distribution', rotation=-90, x=1.2, y=0.2, fontsize=20)
+    ax_right.set_title(r'$\eta$ distribution', rotation=-90, x=1.2, y=0.2, fontsize=20)
 
     return fig, ax_main_left, ax_top, ax_right
 
