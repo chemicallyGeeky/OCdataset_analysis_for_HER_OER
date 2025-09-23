@@ -44,4 +44,4 @@ def remove_bad_adsorbates(oer_data, lowOH=0.9, highOH=1.1,
 
     ooh_filter = get_ooh_filter(lowOH, highOH, lowOO, highOO, lowOOH, highOOH)
     
-    return oer_data[oh_filter.loc[oer_data["system_id_OH"]].to_numpy() & ooh_filter.loc[oer_data["system_id_HO2"]].to_numpy()]
+    return oer_data[oh_filter.loc[oer_data["system_id_OH"]].to_numpy() & ooh_filter.loc[oer_data["system_id_HO2"]].to_numpy()].copy()

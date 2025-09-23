@@ -98,7 +98,7 @@ def plot_main_panel(ax_main_left, ax_top, ax_right, her_data,
     ax_main_left.legend(loc='lower center', fontsize=15)
 
 
-def plot_distributions(ax_top, ax_right, her_data, xlabel, uncertainty=0, bins=150, color='cornflowerblue'):
+def plot_distributions(ax_top, ax_right, her_data, xlabel, uncertainty=0, bins=150, color='cornflowerblue', ideal_pdf=None):
 
     # Shaded area
     counts, bins = np.histogram(her_data[xlabel], bins=bins)         # top plot
@@ -125,6 +125,19 @@ def plot_distributions(ax_top, ax_right, her_data, xlabel, uncertainty=0, bins=1
     ax_right.barh(half_cbins[half_cbins < uncertainty], counts[half_cbins < uncertainty],
                   height=w * 0.8, color=color, alpha=1)    # right plot
 
+    if ideal_pdf is not None:
+        etas = np.linspace(0, 4.92, 300)
+        prob = ideal_pdf(etas)
+
+        def gauss(x, sig):
+            return 1/(sig*np.sqrt(2*np.pi))*np.exp(-0.5*(x-4.92/2)**2/sig**2)
+        
+        prob_smooth = np.convolve(prob, gauss(etas[:-1], 0.05), mode="same")
+
+        prob_smooth = prob_smooth / prob_smooth.max() * counts.max()
+        
+        ax_right.plot(prob_smooth, etas, color='k', lw=1, label='Ideal distribution', linestyle='--')
+    
     return bins
 
 def make_bar_plot(data):
