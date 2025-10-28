@@ -35,6 +35,11 @@ def get_danilov_data(comp_data, closest=True):
 
 
 def main():
+
+    materials_only = False  # If True, only the best surface per material is kept
+    surface_selection = "last"
+    uncertainty = 0.3  # eV
+    
     # Uncomment the next lines to combine LMDB data with metadata
 
     # from oc_analyzer.oc2020 import combine_lmdbs_and_metadata
@@ -50,9 +55,12 @@ def main():
 
     her_data['adsorption_free_energy'] = her_data['adsorption_energy'] + 0.24
     her_data['eta'] = abs(her_data['adsorption_free_energy'])
-
+    
+    if materials_only:
+        her_data = her_data.sort_values("eta").drop_duplicates(subset=["bulk_mpid"], keep=surface_selection)
+    
     lit = get_danilov_data(her_data)
-
+    
     special_samples = {
         'Ca': {"description": 'Ca', "color": 'red', "manual_adjustment": -0.1},  # reacts with acidic conditions
         'Na': {"description": 'Na', "color": 'red', "manual_adjustment": -0.05},  # explodes in water
@@ -63,8 +71,6 @@ def main():
     fig, ax_main_left, ax_top, ax_right = pltu.create_main_panels(ae_limits=(-2, 2),
                                                                   eta_limits=(2, 0),
                                                                   xlabel=r'${\Delta G_H}$')
-
-    uncertainty = 0.3
 
     pltu.add_shadded_regions(ax_main_left, ax_top, ax_right, uncertainty=uncertainty)
     
@@ -78,9 +84,11 @@ def main():
     plt.savefig("paper/figures/her.svg")
     plt.savefig("paper/figures/her.pdf")
 
-    print("Percentage of catalysts within uncertainty: ",
-          len(her_data[(her_data['eta'] < uncertainty)]) / len(her_data) * 100)
+    percentage = len(her_data[(her_data['eta'] < uncertainty)]) / len(her_data) * 100
+    print(f"Percentage of catalysts within uncertainty: {percentage} ({len(her_data[(her_data['eta'] < uncertainty)])} / {len(her_data)})")
 
+    print(f"Number of catalysts: {len(her_data)} surfaces, {len(her_data["bulk_mpid"].unique())} materials")
+    
     plt.show()
 
 

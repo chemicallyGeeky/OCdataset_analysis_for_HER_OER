@@ -17,14 +17,14 @@ def main():
 
     oer_data_filtered = remove_bad_adsorbates(oer_data, **tolerance_dict)
 
-    uncertainty = 0.1
+    uncertainty = 0.2
 
     stability_data["entry_id"] = stability_data["entry_id"].apply(lambda x: "-".join(x.split("-")[:2]))
     stability = stability_data[stability_data["voltage"] == 1.63]
     stability = stability[stability["decomposition_energy"] > -1e-5] # exclude negatives
     stability_filter = stability["entry_id"].isin(oer_data_filtered["bulk_id_OH"])
 
-    pltu.plot_stability_distribution(stability, stability_filter, uncertainty)
+    pltu.plot_stability_distribution(stability, stability_filter, uncertainty, nbins=300) 
 
     print("Total number of structures:", len(stability))
     print("Number of filtered structures:", stability_filter.sum())

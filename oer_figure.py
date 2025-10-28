@@ -7,6 +7,8 @@ import numpy as np
 
 def main():
 
+    materials_only = False  # If True, only the best surface per material is kept
+    surface_selection = "last"
     uncertainty = 0.5
     best_known = 0.4
     unfiltered_color = "gray"
@@ -14,6 +16,9 @@ def main():
     tolerance_dict = {"lowOH": 0.9, "highOH": 1.1,
                       "lowOO": 1.3, "highOO": 1.5,
                       "lowOOH": 95, "highOOH": 115}
+    # tolerance_dict = {"lowOH": 0.8, "highOH": 1.2,
+    #                   "lowOO": 1.4, "highOO": 1.6,
+    #                   "lowOOH": 80, "highOOH": 135}
     correction_dict = {"OH": 0.26, "O": -0.03, "HO2": 0.22}  # From OC2022 paper
 
     data = pd.read_csv('data/oc2022/adsorption_energies.csv', na_values='')
@@ -31,6 +36,10 @@ def main():
 
     # Now we can filter the data based on the adsorbate geometries
     oer_data_filtered = remove_bad_adsorbates(oer_data, **tolerance_dict)
+
+    if materials_only:
+        oer_data = oer_data.sort_values("eta").drop_duplicates(subset=["bulk_id_OH"], keep=surface_selection)
+        oer_data_filtered = oer_data_filtered.sort_values("eta").drop_duplicates(subset=["bulk_id_OH"], keep=surface_selection)
     
     print_stats(oer_data_filtered, uncertainty, best_known=0)
 
@@ -52,7 +61,7 @@ def main():
     bins = pltu.plot_distributions(ax_top, ax_right, oer_data,
                                    xlabel='eta_approx', uncertainty=eta_tresh, color="gray")
 
-    print(f"Number of catalysts: {len(oer_data)} surfaces, {len(oer_data["bulk_id_OH"].unique())} materials")
+    print(f"Number of unfiltered catalysts: {len(oer_data)} surfaces, {len(oer_data["bulk_id_OH"].unique())} materials")
 
     print("Treashold for uncertainty: ", eta_tresh)
 
@@ -79,7 +88,7 @@ def main():
     plt.savefig("paper/figures/oer.svg")
     plt.savefig("paper/figures/oer.pdf")
 
-    print(f"Number of catalysts: {len(oer_data_filtered)} surfaces, {len(oer_data_filtered['bulk_id_OH'].unique())} materials")
+    print(f"Number of filtered catalysts: {len(oer_data_filtered)} surfaces, {len(oer_data_filtered['bulk_id_OH'].unique())} materials")
 
     print("Percentage of catalysts within treshold: ",
           len(oer_data_filtered[(oer_data_filtered['eta'] < eta_tresh)]) / len(oer_data_filtered) * 100)

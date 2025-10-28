@@ -160,12 +160,12 @@ def make_violin_plot(data):
     ax.set_xlabel('Distribution', fontsize=32, fontweight='bold')
     ax.set_ylabel('Adsorption Energy (eV)', fontsize=32, fontweight='bold')
 
-def plot_stability_distribution(stability, stability_filter, uncertainty):
+def plot_stability_distribution(stability, stability_filter, uncertainty, nbins=150):
 
-    plt.figure(figsize=(10, 8))
+    plt.figure(figsize=(10, 4))
     ax = plt.gca()
 
-    counts, bins = np.histogram(stability["decomposition_energy"], bins=150)
+    counts, bins = np.histogram(stability["decomposition_energy"], bins=nbins)
     cbins = (bins[1:] + bins[:-1]) / 2
     w = cbins[1] - cbins[0]
     ax.bar(cbins[(cbins < uncertainty)],
@@ -191,3 +191,5 @@ def plot_stability_distribution(stability, stability_filter, uncertainty):
     ax.set_xlabel('Decomposition Energy (eV/atom)', fontsize=15)
     ax.set_ylabel('Count', fontsize=15)
     ax.legend(loc='upper right', fontsize=15)
+
+    plt.tight_layout()

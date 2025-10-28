@@ -125,7 +125,7 @@ def get_ideal_distr_OER(uncetainty = 0.3, n_surfaces = 1000000, output_size = 10
     energies = np.random.normal(1.23, uncetainty, size=(n_surfaces, 3))
     
     energies[:,1] += 1.23 + best_known
-    energies[:,2] += 2*1.23
+    energies[:,2] += 2*1.23 if best_known <= 0 else 3.2
     
     energies = np.concatenate((np.zeros((n_surfaces, 1)), energies, np.ones((n_surfaces, 1))*1.23*4), axis=1)
     
