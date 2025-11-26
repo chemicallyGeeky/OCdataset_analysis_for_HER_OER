@@ -1,5 +1,5 @@
 #USE: /mnt/c/users/Admin/Desktop/ML/oc2022/
-#search all structures containing HO2
+#search all structures containing the 'HO2' adsorbate
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -13,16 +13,18 @@ import re
 import pickle
 from ase.io.vasp import write_vasp
 
-filename = '/mnt/c/users/Admin/Desktop/ML/oc2022/correctedAdE.csv' 
+filename = 'sortedWithAdE.csv' #dataset of adsorption energies 31425 adsorbate-catalyst system
 adE = pd.read_csv(filename)
 
-mask = adE['ads_symbols'] == 'HO2'
+mask = adE['ads_symbols'] == 'HO2' #keep those entries with HO2 adsorbates: 3238 entires
 adE2 = adE[mask]
 adE2 = adE2.set_index('system_id')
 #OOH search
 OOH_list = list(adE2.index)
 OOH_set = set(OOH_list)
 
+#using the 'system_id' locate where the structural details are in the lmdb datasets
+#save this as a dataframe (numbers) and export as a csv file
 sid = []; file = []; entry = []
    
 for filename in (glob("is2res_total_train_val_test_lmdbs/data/oc22/is2re-total/train/data.*.lmdb") + 
@@ -40,6 +42,7 @@ for filename in (glob("is2res_total_train_val_test_lmdbs/data/oc22/is2re-total/t
 numbers = pd.DataFrame({'filename': file, 'entry number': entry}, index=sid)
 numbers.to_csv('numbersOOH.csv')
 
+#number of adsorbates
 mask1 = adE2['nads']==1 #3214
 mask2 = adE2['nads']==2 #21
 mask3 = adE2['nads']==3 #2
@@ -47,8 +50,11 @@ mask4 = adE2['nads']==4 #1
 print(len(adE2[mask1]), len(adE2[mask2]), len(adE2[mask3]), len(adE2[mask4]))
 breakpoint()
 
-#OOH bond lengths and angles
-results = {} #all first OOH
+#extract OOH bond lengths and angles of each structure
+#since we do not know which is the 'central' O of OOH, there are two OH lengths (with either O)
+#and two OOH angles (with either O at the vertex)
+#only the angles associated with the first two adsorbates were extracted
+results = {} #all first OOH adsorbate
 results2 = {} # nads > 1
 for i in range(len(file)):
      dataset = LmdbDataset({'src': file[i]})
@@ -85,23 +91,35 @@ for i in range(len(file)):
                     'OO_lengthb': OO_b, 'OOH_angle_1b': angle1_b, 'OOH_angle_2b': angle2_b }
         print(sid[i], 'filename', file[i], 'entry number', entry[i]) #check manually later  
      
-results_df = pd.DataFrame.from_dict(results, orient='index')  
-results2_df = pd.DataFrame.from_dict(results2, orient='index') #nads > 1, 2nd adsorbate
+results_df = pd.DataFrame.from_dict(results, orient='index')  # len 3238
+results2_df = pd.DataFrame.from_dict(results2, orient='index') #nads > 1, 2nd adsorbate, len 24
 df = pd.concat([results_df, results2_df], axis=1) #combine
 
 breakpoint()
 adE2 = adE2.rename(columns={'nads': 'nads0'})
-adE3 = df.join(adE2, how='inner')
-adE3.to_csv('angles_OOH.csv') #3238
+adE_OOH = df.join(adE2, how='inner')
 
-#nads > 2
-# 43116 filename is2res_total_train_val_test_lmdbs/data/oc22/is2re-total/train/data.0017.lmdb entry number 150
-# 42932 filename is2res_total_train_val_test_lmdbs/data/oc22/is2re-total/train/data.0033.lmdb entry number 573
-# 44497 filename is2res_total_train_val_test_lmdbs/data/oc22/is2re-total/train/data.0034.lmdb entry number 183
+#collapse
+cols = ['filename', 'entry number', 'composition', 'nads', 'Unnamed: 0', 'bulk_id', 'miller_index', 'nads0',
+       'bulk_symbols', 'slab_sid', 'ads_symbols', 'adsorption_energy']
+adE_OOH = adE_OOH.drop(columns=cols, errors='ignore')
+adE_OOH['OH length 1'] = adE_OOH.apply(lambda row: [row['OH_length_1']] + ([row['OH_length_1b']] if not pd.isna(row['OH_length_1b']) else []), axis=1)
+adE_OOH['OH length 2'] = adE_OOH.apply(lambda row: [row['OH_length_2']] + ([row['OH_length_2b']] if not pd.isna(row['OH_length_2b']) else []), axis=1)
+
+adE_OOH['OOH angle 1'] = adE_OOH.apply(lambda row: [row['OOH_angle_1']] + ([row['OOH_angle_1b']] if not pd.isna(row['OOH_angle_1b']) else []), axis=1)
+adE_OOH['OOH angle 2'] = adE_OOH.apply(lambda row: [row['OOH_angle_2']] + ([row['OOH_angle_2b']] if not pd.isna(row['OOH_angle_2b']) else []), axis=1)
+
+adE_OOH['OO length'] = adE_OOH.apply(lambda row: [row['OO_length']] + ([row['OO_lengthb']] if not pd.isna(row['OO_lengthb']) else []), axis=1)
+
+cols = ['traj_id', 'y_relaxed', 'natoms', 'nads2','OH_length_1', 'OH_length_2', 'OO_length', 'OOH_angle_1', 'OOH_angle_2',
+       'OH_length_1b', 'OH_length_2b', 'OO_lengthb', 'OOH_angle_1b',
+       'OOH_angle_2b']
+adE_OOH = adE_OOH.drop(columns=cols, errors='ignore')
+adE_OOH.to_csv('OOH_geomteries.csv') #3238
 
 #ex 1: 4 adsorbates
-dataset = LmdbDataset({'src': 'is2res_total_train_val_test_lmdbs/data/oc22/is2re-total/train/data.0034.lmdb'})
-data = dataset[183] 
+dataset = LmdbDataset({'src': '../is2res_total_train_val_test_lmdbs/data/oc22/is2re-total/train/data.0000.lmdb'})
+data = dataset[624] 
 cell = data.cell.squeeze(0).numpy() 
 cell = data.cell.squeeze(0).numpy() 
 atoms = Atoms( numbers=data.atomic_numbers.tolist(), positions=data.pos_relaxed.numpy(), cell=cell,  pbc=True)
@@ -114,6 +132,10 @@ O_pos = np.setdiff1d(ads_pos, H_pos)
 print(H_pos, O_pos)
 print(atoms.get_chemical_formula())
 write_vasp('H3Ag24Ba22O48_HO2_CONTCAR', atoms)
+
+
+
+
 
 
 
