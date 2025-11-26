@@ -47,7 +47,7 @@ def main():
     
     fig, ax_main_left, ax_top, ax_right = pltu.create_main_panels(ae_limits=(-5, 5),
                                                                   eta_limits=(5, 0),
-                                                                  xlabel=r'${\Delta G_{O} - \Delta G_{OH}} - 1.23$')
+                                                                  xlabel=r'${\Delta G_{*O} - \Delta G_{*OH}} - 1.23$')
 
     pltu.add_best_value(ax_main_left, ax_top, ax_right, best_val=best_known, color="lime")
     
