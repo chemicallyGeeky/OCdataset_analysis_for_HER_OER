@@ -70,7 +70,7 @@ def main():
 
     fig, ax_main_left, ax_top, ax_right = pltu.create_main_panels(ae_limits=(-2, 2),
                                                                   eta_limits=(2, 0),
-                                                                  xlabel=r'${\Delta G_H}$')
+                                                                  xlabel=r'${\Delta G_{*H}}$')
 
     pltu.add_shadded_regions(ax_main_left, ax_top, ax_right, uncertainty=uncertainty)
     
