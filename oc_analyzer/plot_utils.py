@@ -113,7 +113,7 @@ def plot_distributions(ax_top, ax_right, her_data, xlabel, uncertainty=0, bins=1
 
 
     # Reoriganize the bins because this spans only half the range
-    half_bins = np.sort(np.concat([(bins[1:] + bins[:-1]) / 2, bins]))
+    half_bins = np.sort(np.concatenate([(bins[1:] + bins[:-1]) / 2, bins]))
     half_bins = half_bins - half_bins.min()
     half_bins = half_bins[half_bins >= 0]
 
