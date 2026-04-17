@@ -155,26 +155,33 @@ if __name__ == "__main__":
         oc22_data = oc22_data.drop(ooh_filter[~ooh_filter].index)
         oc20_data = oc20_data[oc20_data['anomaly'] == 0]
 
+    # Rename adsorbates from the start
+    oc22_data = oc22_data.replace({'ads_symbols': {'OH': '*OH', 'O': '*O', 'HO2': '*OOH'}})
+
     print("OC22 data:")
-    oc22_dict = print_stats(oc22_data, adsorbates=['OH', 'O', 'HO2'])
+    oc22_dict = print_stats(oc22_data, adsorbates=['*OH', '*O', '*OOH'])
     oc22_basic_stats = pd.concat({k:v["df"] for k,v in oc22_dict.items()}).stack().unstack("ads_symbols")
     
     # Clean up the dataframe
-    oc22_basic_stats.columns.name = None  # Remove the "ads_symbols" index name
-    oc22_basic_stats = oc22_basic_stats.rename(columns={'OH': '*OH', 'O': '*O', 'HO2': '*OOH'})  # Rename columns
-    oc22_basic_stats = oc22_basic_stats[['*OH', '*O', '*OOH', 'All']]  # Reorder columns
+    oc22_basic_stats.columns.name = None
+    oc22_basic_stats = oc22_basic_stats[['*OH', '*O', '*OOH', 'All']]
 
     print()
 
     pd.DataFrame(oc22_basic_stats).to_latex("paper/tables/oc22_similarity_stats.tex", float_format=lambda x: f"{x:.2f}")
+    
+    oc22_advanced_stats = pd.concat({k:pd.concat({kk:v[kk].loc[['*OH', '*O', '*OOH'],['*OH', '*O', '*OOH']] for kk in ["Cov matrix", "Pearson matrix", "Sizes"]}, axis=1) for k,v in oc22_dict.items()})
+    oc22_advanced_stats.index.names = [None, None]
+    oc22_advanced_stats.columns.names = [None, None]
+    
+    pd.DataFrame(oc22_advanced_stats).to_latex("paper/tables/oc22_advanced_similarity_stats.tex", float_format=lambda x: f"{x:.2f}")
 
     print("OC20 data:")
     oc20_dict = print_stats(oc20_data, adsorbates=['*H'],oc22=False)
     oc20_basic_stats = pd.concat({k:v["df"] for k,v in oc20_dict.items()}).stack().unstack("ads_symbols")   
     
     # Clean up the dataframe
-    oc20_basic_stats.columns.name = None  # Remove the "ads_symbols" index name
-    oc20_basic_stats = oc20_basic_stats.rename(columns={'*H': '*H'})  # Already has asterisk
+    oc20_basic_stats.columns.name = None
     oc20_basic_stats = oc20_basic_stats[['*H']]
     
     pd.DataFrame(oc20_basic_stats).to_latex("paper/tables/oc20_similarity_stats.tex", float_format=lambda x: f"{x:.2f}")
