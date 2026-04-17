@@ -3,6 +3,8 @@ import numpy as np
 from oc_analyzer.oc2022.filter import get_oh_filter, get_ooh_filter
 import seaborn as sns
 import matplotlib.pyplot as plt
+import yaml
+import os
 
 def group_similar(df, subset, quantity):
     # Check duplicates
@@ -196,6 +198,17 @@ if __name__ == "__main__":
     oc22_advanced_stats.columns.names = [None, None]
     
     pd.DataFrame(oc22_advanced_stats).to_latex("paper/tables/oc22_advanced_similarity_stats.tex", float_format=lambda x: f"{x:.2f}")
+    
+    # Save advanced stats as YAML
+    advanced_stats_yaml = {}
+    for scenario, scenario_data in oc22_dict.items():
+        advanced_stats_yaml[scenario] = {
+            "Cov matrix": scenario_data["Cov matrix"].to_dict(),
+            "Pearson matrix": scenario_data["Pearson matrix"].to_dict(),
+        }
+    
+    with open("data/oc2022/advanced_stats.yaml", "w") as f:
+        yaml.dump(advanced_stats_yaml, f, default_flow_style=False)
 
     print("OC20 data:")
     oc20_dict = print_stats(oc20_data, adsorbates=['*H'],oc22=False)

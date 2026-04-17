@@ -11,6 +11,7 @@ def main():
     surface_selection = "last"
     uncertainty = 0.5
     best_known = 0.4
+    correlation = None  # Options: "miller", "miller_nads", "pearson_miller", "pearson_miller_nads" (None = no correlation)
     unfiltered_color = "gray"
     filtered_color = "cornflowerblue"
     tolerance_dict = {"lowOH": 0.9, "highOH": 1.1,
@@ -41,9 +42,9 @@ def main():
         oer_data = oer_data.sort_values("eta").drop_duplicates(subset=["bulk_id_OH"], keep=surface_selection)
         oer_data_filtered = oer_data_filtered.sort_values("eta").drop_duplicates(subset=["bulk_id_OH"], keep=surface_selection)
     
-    print_stats(oer_data_filtered, uncertainty, best_known=0)
+    print_stats(oer_data_filtered, uncertainty, best_known=0, correlation=correlation)
 
-    pdf, eta_tresh = print_stats(oer_data_filtered, uncertainty, best_known=best_known)
+    pdf, eta_tresh = print_stats(oer_data_filtered, uncertainty, best_known=best_known, correlation=correlation)
     
     fig, ax_main_left, ax_top, ax_right = pltu.create_main_panels(ae_limits=(-5, 5),
                                                                   eta_limits=(5, 0),

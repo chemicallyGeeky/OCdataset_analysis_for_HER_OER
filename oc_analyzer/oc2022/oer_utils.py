@@ -4,6 +4,8 @@ from sklearn.linear_model import LinearRegression
 import torch
 from tqdm import tqdm
 from scipy.interpolate import CubicSpline
+import yaml
+import os
 
 def gibbs_correction(row, correction_dict):
     """
@@ -120,12 +122,49 @@ def uncertainty_bootstrap(row, uncertainty, n_samples=1000):
     row["uncertainty_bootstrap"] = np.std(gmax)
     return row
 
-def get_ideal_distr_OER(uncetainty = 0.3, n_surfaces = 1000000, output_size = 1000, best_known=0):
+def get_ideal_distr_OER(uncertainty = 0.3, n_surfaces = 1000000, output_size = 1000, best_known=0, correlation=None, stats_file="data/oc2022/advanced_stats.yaml"):
     
-    energies = np.random.normal(1.23, uncetainty, size=(n_surfaces, 3))
+    mean = np.array([1.23, 2*1.23 + best_known, 3*1.23 if best_known <= 0 else (1.23 + 3.2)])
     
-    energies[:,1] += 1.23 + best_known
-    energies[:,2] += 2*1.23 if best_known <= 0 else 3.2
+    if correlation == "pearson_miller":
+        with open(stats_file, 'r') as f:
+            stats = yaml.safe_load(f)
+        pearson_dict = stats["Same miller (termination + coverage + site)"]["Pearson matrix"]
+        pearson_matrix = pd.DataFrame(pearson_dict).to_numpy()
+        cov = pearson_matrix * (uncertainty**2)
+
+    elif correlation == "pearson_miller_nads":
+        with open(stats_file, 'r') as f:
+            stats = yaml.safe_load(f)
+        pearson_dict = stats["Same miller and $n_\\text{ads}$ (termination + site)"]["Pearson matrix"]
+        pearson_matrix = pd.DataFrame(pearson_dict).to_numpy()
+        cov = pearson_matrix * (uncertainty**2)
+
+    elif correlation == "pearson_worst":
+
+        cov = np.diag([uncertainty**2, uncertainty**2, uncertainty**2])
+
+        cov[0,1] = cov[1,0] = 0.65 * uncertainty**2
+        cov[0,2] = cov[2,0] = 0.48 * uncertainty**2
+        cov[1,2] = cov[2,1] = 0.31 * uncertainty**2
+
+    elif correlation == "miller_nads":
+        with open(stats_file, 'r') as f:
+            stats = yaml.safe_load(f)
+        cov_dict = stats["Same miller and $n_\\text{ads}$ (termination + site)"]["Cov matrix"]
+        cov = pd.DataFrame(cov_dict).to_numpy()
+
+    elif correlation == "miller":
+        with open(stats_file, 'r') as f:
+            stats = yaml.safe_load(f)
+        cov_dict = stats["Same miller (termination + coverage + site)"]["Cov matrix"]
+        cov = pd.DataFrame(cov_dict).to_numpy()
+
+    else:
+        cov = np.diag([uncertainty**2, uncertainty**2, uncertainty**2])
+
+        
+    energies = np.random.multivariate_normal(mean, cov, n_surfaces)
     
     energies = np.concatenate((np.zeros((n_surfaces, 1)), energies, np.ones((n_surfaces, 1))*1.23*4), axis=1)
     
@@ -160,9 +199,9 @@ def get_ideal_distr_OER(uncetainty = 0.3, n_surfaces = 1000000, output_size = 10
         
     return etas, pdf, cdf
 
-def get_ideal_distr_HER(uncetainty = 0.3, n_surfaces = 1000000, output_size = 1000):
+def get_ideal_distr_HER(uncertainty = 0.3, n_surfaces = 1000000, output_size = 1000):
 
-    energies = np.random.normal(0, uncetainty, size=(n_surfaces, 3))
+    energies = np.random.normal(0, uncertainty, size=(n_surfaces, 3))
 
     etas = abs(energies)
 
@@ -190,8 +229,6 @@ def uncertainty_propagation(data, uncertainty, k=10):
     data = data.apply(uncertainty_bootstrap, axis=1, args=(uncertainty, 1000))
 
     gmax_grid, std_grid = bootstrap_gmax(0.5, n_samples=1000, grid_size=99, n_batch=3)
-
-    breakpoint()
     
     data = data.apply(unbiased_bootstrap, axis=1, args=(gmax_grid, std_grid))
 
@@ -199,11 +236,11 @@ def uncertainty_propagation(data, uncertainty, k=10):
     
     return data
 
-def print_stats(data, uncertainty, best_known=0, treshold=0.6827):
+def print_stats(data, uncertainty, best_known=0, treshold=0.6827, correlation=None):
 
     qualifier = "best known" if best_known > 0 else "ideal"
     
-    ideal_etas, pdf, cdf = get_ideal_distr_OER(uncertainty, best_known=best_known)
+    ideal_etas, pdf, cdf = get_ideal_distr_OER(uncertainty, best_known=best_known, correlation=correlation)
 
     p = np.mean(1 - cdf(data['eta']))
     p_ideal = np.mean(1 - cdf(ideal_etas))
