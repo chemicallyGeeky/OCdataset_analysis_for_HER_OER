@@ -44,11 +44,20 @@ def group_similar(df, subset, quantity):
         
         if same_slab.empty:
             continue
+
+        if set(df["ads_symbols"].unique()) == set(['*OH', '*O', '*OOH']):
+            adsorbate_order = ['*OH', '*O', '*OOH']
+        else:
+            adsorbate_order = df["ads_symbols"].unique()
         
         dist_to_mean = same_slab[quantity] - same_slab[quantity].mean()
 
-        dist_to_mean = dist_to_mean.reindex(columns=df["ads_symbols"].unique())
+        dist_to_mean = dist_to_mean.reindex(columns=adsorbate_order)
 
+        max_diff = same_slab[quantity].max() - same_slab[quantity].min()
+
+        max_diff = max_diff.reindex(index=adsorbate_order)
+        
         max_diffs.append(same_slab[quantity].max() - same_slab[quantity].min())
         
         df_list.append(same_pair)
@@ -84,6 +93,18 @@ def group_similar(df, subset, quantity):
     for ax in g.axes.flatten():
         ax.set_xlim(-5, 5)
         ax.set_ylim(-5, 5)
+        # Add light gray grid
+        ax.grid(True, color='lightgray', linewidth=0.5, alpha=0.7)
+        # Add slightly darker lines at x=0 and y=0
+        ax.axhline(y=0, color='gray', linewidth=0.8, alpha=0.8)
+        ax.axvline(x=0, color='gray', linewidth=0.8, alpha=0.8)
+
+    # Save the plot with dynamic filename from dataframe
+    adsorbates_str = "_".join(adsorbate_order)
+    subset_str = "_".join(subset)
+    plot_name = f"pairplot_{adsorbates_str}_{subset_str}".replace(" ", "_").replace("*", "")
+    g.savefig(f"paper/figures/{plot_name}.svg", dpi=300, bbox_inches='tight')
+    g.savefig(f"paper/figures/{plot_name}.pdf", dpi=300, bbox_inches='tight')
 
     plt.show()
 
@@ -170,7 +191,7 @@ if __name__ == "__main__":
 
     pd.DataFrame(oc22_basic_stats).to_latex("paper/tables/oc22_similarity_stats.tex", float_format=lambda x: f"{x:.2f}")
     
-    oc22_advanced_stats = pd.concat({k:pd.concat({kk:v[kk].loc[['*OH', '*O', '*OOH'],['*OH', '*O', '*OOH']] for kk in ["Cov matrix", "Pearson matrix", "Sizes"]}, axis=1) for k,v in oc22_dict.items()})
+    oc22_advanced_stats = pd.concat({k:pd.concat({kk:v[kk] for kk in ["Cov matrix", "Pearson matrix", "Sizes"]}, axis=1) for k,v in oc22_dict.items()})
     oc22_advanced_stats.index.names = [None, None]
     oc22_advanced_stats.columns.names = [None, None]
     
