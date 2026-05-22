@@ -11,7 +11,7 @@ def main():
     surface_selection = "last"
     uncertainty = 0.5
     best_known = 0.4
-    correlation = None  # Options: "miller", "miller_nads", "pearson_miller", "pearson_miller_nads" (None = no correlation)
+    correlation = "pearson_worst"  # Options: "miller", "miller_nads", "pearson_miller", "pearson_miller_nads" (None = no correlation)
     unfiltered_color = "gray"
     filtered_color = "cornflowerblue"
     tolerance_dict = {"lowOH": 0.9, "highOH": 1.1,
@@ -45,6 +45,10 @@ def main():
     print_stats(oer_data_filtered, uncertainty, best_known=0, correlation=correlation)
 
     pdf, eta_tresh = print_stats(oer_data_filtered, uncertainty, best_known=best_known, correlation=correlation)
+
+    print_stats(oer_data_filtered, uncertainty, best_known=0, correlation=None)
+
+    pdf_none, eta_tresh_none = print_stats(oer_data_filtered, uncertainty, best_known=best_known, correlation=None)
     
     fig, ax_main_left, ax_top, ax_right = pltu.create_main_panels(ae_limits=(-5, 5),
                                                                   eta_limits=(5, 0),
@@ -52,7 +56,7 @@ def main():
 
     pltu.add_best_value(ax_main_left, ax_top, ax_right, best_val=best_known, color="lime")
     
-    pltu.add_shadded_regions(ax_main_left, ax_top, ax_right, uncertainty=eta_tresh)
+    pltu.add_shadded_regions(ax_main_left, ax_top, ax_right, uncertainty=eta_tresh, uncertainty2=eta_tresh_none)
 
     pltu.plot_main_panel(ax_main_left, ax_top, ax_right, oer_data,
                          xlabel='eta_approx',
@@ -64,10 +68,13 @@ def main():
 
     print(f"Number of unfiltered catalysts: {len(oer_data)} surfaces, {len(oer_data["bulk_id_OH"].unique())} materials")
 
-    print("Treashold for uncertainty: ", eta_tresh)
+    print(f"Threshold (pearson_worst): {eta_tresh:.4f} V")
+    print(f"Threshold (uncorrelated):  {eta_tresh_none:.4f} V")
 
-    print("Percentage of catalysts within treshold: ",
+    print("Percentage of catalysts within threshold (pearson_worst): ",
           len(oer_data[(oer_data['eta'] < eta_tresh)]) / len(oer_data) * 100)
+    print("Percentage of catalysts within threshold (uncorrelated): ",
+          len(oer_data[(oer_data['eta'] < eta_tresh_none)]) / len(oer_data) * 100)
 
     print("Percentage of catalysts outside 4.92 V: ",
           len(oer_data[(oer_data['eta'] > 4.92)]) / len(oer_data) * 100)
@@ -84,17 +91,19 @@ def main():
                          label='Filtered predictions')
 
     pltu.plot_distributions(ax_top, ax_right, oer_data_filtered,
-                            xlabel='eta_approx', uncertainty=eta_tresh, bins=bins, color=filtered_color, ideal_pdf=pdf)
+                            xlabel='eta_approx', uncertainty=eta_tresh, bins=bins, color=filtered_color, ideal_pdf=pdf, ideal_pdf2=pdf_none)
     
     plt.savefig("paper/figures/oer.svg")
     plt.savefig("paper/figures/oer.pdf")
 
     print(f"Number of filtered catalysts: {len(oer_data_filtered)} surfaces, {len(oer_data_filtered['bulk_id_OH'].unique())} materials")
 
-    print("Percentage of catalysts within treshold: ",
+    print("Percentage of filtered catalysts within threshold (pearson_worst): ",
           len(oer_data_filtered[(oer_data_filtered['eta'] < eta_tresh)]) / len(oer_data_filtered) * 100)
+    print("Percentage of filtered catalysts within threshold (uncorrelated): ",
+          len(oer_data_filtered[(oer_data_filtered['eta'] < eta_tresh_none)]) / len(oer_data_filtered) * 100)
 
-    print("Percentage of catalysts outside 4.92 V: ",
+    print("Percentage of filtered catalysts outside 4.92 V: ",
           len(oer_data_filtered[(oer_data_filtered['eta'] > 4.92)]) / len(oer_data_filtered) * 100)
 
     plt.show()

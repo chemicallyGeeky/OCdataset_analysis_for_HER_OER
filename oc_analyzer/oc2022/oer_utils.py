@@ -145,9 +145,13 @@ def get_ideal_distr_OER(uncertainty = 0.3, n_surfaces = 1000000, output_size = 1
         cov = np.diag([uncertainty**2, uncertainty**2, uncertainty**2])
 
         cov[0,1] = cov[1,0] = 0.65 * uncertainty**2
-        cov[0,2] = cov[2,0] = 0.48 * uncertainty**2
-        cov[1,2] = cov[2,1] = 0.31 * uncertainty**2
+        cov[0,2] = cov[2,0] = 0.32 * uncertainty**2
+        cov[1,2] = cov[2,1] = 0.48 * uncertainty**2
 
+        print(cov)
+        
+        breakpoint()
+        
     elif correlation == "miller_nads":
         with open(stats_file, 'r') as f:
             stats = yaml.safe_load(f)

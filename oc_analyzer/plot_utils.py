@@ -40,19 +40,30 @@ def create_main_panels(ae_limits=(-2, 2), eta_limits=(2, 0), xlabel=r'${\Delta G
     ax_main_left.set_xlabel(r'Predicted ' + xlabel + r' (eV)', fontsize=20)
     ax_main_left.set_ylabel(r'$\eta$ (V)', fontsize=20)
     ax_top.set_title(xlabel + r" distribution", fontsize=20)
-    ax_right.set_title(r'$\eta$ distribution', rotation=-90, x=1.2, y=0.2, fontsize=20)
+    ax_right.set_title(r'$\eta$ distribution', rotation=-90, x=1.2, y=0.3, fontsize=20)
+
 
     return fig, ax_main_left, ax_top, ax_right
 
 
-def add_shadded_regions(ax_main_left, ax_top, ax_right, uncertainty=0.3):
+def add_shadded_regions(ax_main_left, ax_top, ax_right, uncertainty=0.3, uncertainty2=None):
 
-    # Add shaded regions for uncertainty
+    # Solid gray region (pearson_worst threshold)
     ax_main_left.axhspan(uncertainty, 0, color='gray', alpha=0.2,
-                         label="Ideal within uncertainty", zorder=0)
-    ax_main_left.axvspan(-uncertainty, uncertainty, color='gray', alpha=0.2, zorder=0)
-    ax_top.axvspan(-uncertainty, uncertainty, color='gray', alpha=0.2, zorder=0)
-    ax_right.axhspan(uncertainty, 0, color='gray', alpha=0.2, zorder=0)
+                         label="Ideal within uncertainty", zorder=0, lw=0)
+    # ax_main_left.axvspan(-uncertainty, uncertainty, color='gray', alpha=0.2, zorder=0)
+    # ax_top.axvspan(-uncertainty, uncertainty, color='gray', alpha=0.2, zorder=0)
+    ax_right.axhspan(uncertainty, 0, color='gray', alpha=0.2, zorder=0, lw=0)
+
+    # Striped region from pearson_worst threshold to uncorrelated threshold
+    if uncertainty2 is not None:
+        hatch_kw = dict(color='gray', alpha=0.1, hatch='///', zorder=0, lw=0)
+        ax_main_left.axhspan(uncertainty2, uncertainty, **hatch_kw)
+        #ax_main_left.axvspan(-uncertainty2, -uncertainty, **hatch_kw)
+        #ax_main_left.axvspan(uncertainty, uncertainty2, **hatch_kw)
+        #ax_top.axvspan(-uncertainty2, -uncertainty, **hatch_kw)
+        #ax_top.axvspan(uncertainty, uncertainty2, **hatch_kw)
+        ax_right.axhspan(uncertainty2, uncertainty, **hatch_kw)
 
 def add_best_value(ax_main_left, ax_top, ax_right, best_val=0.4, color='magenta'):
 
@@ -98,7 +109,7 @@ def plot_main_panel(ax_main_left, ax_top, ax_right, her_data,
     ax_main_left.legend(loc='lower center', fontsize=15)
 
 
-def plot_distributions(ax_top, ax_right, her_data, xlabel, uncertainty=0, bins=150, color='cornflowerblue', ideal_pdf=None):
+def plot_distributions(ax_top, ax_right, her_data, xlabel, uncertainty=0, bins=150, color='cornflowerblue', ideal_pdf=None, ideal_pdf2=None):
 
     # Shaded area
     counts, bins = np.histogram(her_data[xlabel], bins=bins)         # top plot
@@ -109,7 +120,7 @@ def plot_distributions(ax_top, ax_right, her_data, xlabel, uncertainty=0, bins=1
                width=w * 0.8, color=color, alpha=1)    # top plot
     ax_top.bar(cbins[(cbins < -uncertainty) | (cbins > uncertainty)],
                counts[(cbins < -uncertainty) | (cbins > uncertainty)],
-               width=w * 0.8, color=color, alpha=0.3)    # top plot
+               width=w * 0.8, color=color, alpha=1)    # top plot
 
 
     # Reoriganize the bins because this spans only half the range
@@ -133,10 +144,19 @@ def plot_distributions(ax_top, ax_right, her_data, xlabel, uncertainty=0, bins=1
             return 1/(sig*np.sqrt(2*np.pi))*np.exp(-0.5*(x-4.92/2)**2/sig**2)
         
         prob_smooth = np.convolve(prob, gauss(etas[:-1], 0.05), mode="same")
-
         prob_smooth = prob_smooth / prob_smooth.max() * counts.max()
-        
-        ax_right.plot(prob_smooth, etas, color='k', lw=1, label='Ideal distribution', linestyle='--')
+        ax_right.plot(prob_smooth, etas, color='k', lw=1, label='Ideal (correlated)', linestyle='--')
+
+    if ideal_pdf2 is not None:
+        etas = np.linspace(0, 4.92, 300)
+        prob2 = ideal_pdf2(etas)
+
+        def gauss(x, sig):
+            return 1/(sig*np.sqrt(2*np.pi))*np.exp(-0.5*(x-4.92/2)**2/sig**2)
+
+        prob2_smooth = np.convolve(prob2, gauss(etas[:-1], 0.05), mode="same")
+        prob2_smooth = prob2_smooth / prob2_smooth.max() * counts.max()
+        ax_right.plot(prob2_smooth, etas, color='k', lw=1, label='Ideal (uncorrelated)', linestyle=':')
     
     return bins
 
